@@ -16,6 +16,8 @@ async function bootstrap() {
     origin: [
       process.env.ADMIN_PANEL_URL || '',
       process.env.FRONTEND_URL || '',
+      'http://localhost:3000',  // Admin panel local development
+      'http://localhost:3002',  // Frontend local development
     ].filter(Boolean),
 
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
