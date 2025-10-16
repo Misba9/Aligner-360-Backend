@@ -14,19 +14,15 @@ async function bootstrap() {
 
   const port = configService.get<number>('PORT') || 8080;
 
+  // WARNING: This is a temporary solution for development only
+  // Do not use '*' in production as it's a security risk
   app.enableCors({
-    origin: [
-      configService.get<string>('ADMIN_PANEL_URL') || '',
-      configService.get<string>('FRONTEND_URL') || '',
-      'http://localhost:3000',  // Admin panel local development
-      'http://localhost:3001',  // Admin panel local development (fallback port)
-      'http://localhost:3002',  // Frontend local development
-    ].filter(Boolean),
-
+    origin: true, // This will allow all origins
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   });
+  
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true, // Removes unknown properties

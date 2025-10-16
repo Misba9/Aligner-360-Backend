@@ -193,26 +193,40 @@ export class AuthService {
       where: { email },
     });
 
+    // More detailed logging for debugging
+    console.log('Login attempt for email:', email);
+    console.log('User found:', !!user);
+    if (user) {
+      console.log('User verification status:', user.isEmailVerified);
+      console.log('User active status:', user.isActive);
+    }
+
     if (!user) {
-      throw new NotFoundException('User not found');
+      console.log('User not found in database');
+      throw new NotFoundException('User not found. Please check your email or sign up.');
     }
 
     // Check if email is verified
     if (!user.isEmailVerified) {
+      console.log('User email not verified');
       throw new UnauthorizedException(
-        'Please verify your email address before logging in',
+        'Please verify your email address before logging in. Check your email for a verification link.',
       );
     }
 
     if (!user.isActive) {
-      throw new UnauthorizedException('Your account is not active');
+      console.log('User account not active');
+      throw new UnauthorizedException('Your account is not active. Please contact support.');
     }
 
     // Compare passwords
     const isPasswordValid = await bcrypt.compare(password, user.password);
+    
+    console.log('Password validation result:', isPasswordValid);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      console.log('Invalid password provided');
+      throw new UnauthorizedException('Invalid credentials. Please check your email and password.');
     }
 
     // Generate token
@@ -236,6 +250,40 @@ export class AuthService {
       token,
     };
   }
+
+  // Debug method to check user status (for development only)
+  async debugUser(email: string) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new NotFoundException('Endpoint not available');
+    }
+    
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { email },
+      });
+      
+      if (!user) {
+        return { message: 'User not found' };
+      }
+      
+      return {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        isEmailVerified: user.isEmailVerified,
+        isActive: user.isActive,
+        role: user.role,
+        createdAt: user.createdAt,
+      };
+    } catch (error) {
+      return { 
+        message: 'Error checking user',
+        error: error.message 
+      };
+    }
+  }
+
   generateToken(
     userId: string,
     role: UserRole,

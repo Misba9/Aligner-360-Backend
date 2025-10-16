@@ -8,6 +8,7 @@ import {
   Get,
   UseGuards,
   Req,
+  Param,
 } from '@nestjs/common';
 import { Response, Request } from 'express';
 import { AuthService } from '../services/auth.service';
@@ -103,5 +104,23 @@ export class AuthController {
   async resendVerification(@Body('email') email: string, @Res() res: Response) {
     const result = await this.authService.resendVerificationEmail(email);
     return res.status(HttpStatus.OK).json(result);
+  }
+
+  // Debug endpoint to check user status (only for development)
+  @Get('debug/user/:email')
+  async debugUser(@Param('email') email: string, @Res() res: Response) {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(HttpStatus.NOT_FOUND).json({ message: 'Endpoint not found' });
+    }
+    
+    try {
+      const userData = await this.authService.debugUser(email);
+      return res.status(HttpStatus.OK).json(userData);
+    } catch (error) {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ 
+        message: 'Error checking user',
+        error: error.message 
+      });
+    }
   }
 }
