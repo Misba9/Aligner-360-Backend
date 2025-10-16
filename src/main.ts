@@ -3,21 +3,23 @@ import { AppModule } from './app.module';
 import cookieParser from 'cookie-parser';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const configService = app.get(ConfigService);
 
   app.use(cookieParser());
   app.setGlobalPrefix('api/v1');
 
-  const port = process.env.PORT || 8080;
+  const port = configService.get<number>('PORT') || 8080;
 
   app.enableCors({
     origin: [
-      process.env.ADMIN_PANEL_URL || '',
-      process.env.FRONTEND_URL || '',
-      'http://localhost:3000',  // Admin panel local development
-      'http://localhost:3002',  // Frontend local development
+      configService.get<string>('ADMIN_PANEL_URL') || '',
+      configService.get<string>('FRONTEND_URL') || '',
+      // 'http://localhost:3000',  // Admin panel local development
+      // 'http://localhost:3002',  // Frontend local development
     ].filter(Boolean),
 
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

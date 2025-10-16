@@ -1,20 +1,19 @@
+# Exported from Render on 2025-10-16T21:36:09Z
+version: "1"
 services:
-  - type: web
-    name: aligner-360-backend
-    env: node
-    buildCommand: npm install && npm run build
-    startCommand: npm run start
-    plan: free
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: DATABASE_URL
-        sync: false
-      - key: JWT_SECRET
-        sync: false
-      - key: IMAGEKIT_PUBLIC_KEY
-        sync: false
-      - key: IMAGEKIT_PRIVATE_KEY
-        sync: false
-      - key: IMAGEKIT_URL_ENDPOINT
-        sync: false
+- type: web
+  name: Aligner-360-Backend
+  runtime: node
+  repo: https://github.com/Misba9/Aligner-360-Backend
+  plan: free
+  envVars:
+  - key: DATABASE_URL
+    sync: false
+  - key: ADMIN_PANEL_URL
+    sync: false
+  - key: FRONTEND_URL
+    sync: false
+  region: oregon
+  buildCommand: npm install; npm run build
+  startCommand: npm run start
+  autoDeployTrigger: commit
