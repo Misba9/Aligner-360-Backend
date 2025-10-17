@@ -6,12 +6,8 @@
   "license": "MIT",
   "scripts": {
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-<<<<<<< HEAD
     "build": "nest build",
-  "start": "nest start --watch",
-=======
-    "start": "nest start --prod",
->>>>>>> 4b3e65b961605d894a685da4d07a3d73a3a5278b
+    "start": "node server",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/src/main",
