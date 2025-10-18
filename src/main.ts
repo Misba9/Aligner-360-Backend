@@ -17,7 +17,10 @@ async function bootstrap() {
   // WARNING: This is a temporary solution for development only
   // Do not use '*' in production as it's a security risk
   app.enableCors({
-    origin: true, // This will allow all origins
+     origin: [
+    'https://www.aligner360.in', // ✅ production frontend
+    'http://localhost:3000',     // ✅ for local development
+  ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
