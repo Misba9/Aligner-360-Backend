@@ -25,13 +25,17 @@ async function bootstrap() {
   });
 
   // ✅ Global validation pipes
-  app.useGlobalPipes(
-    new ValidationPipe({
-      transform: true,             // Automatically transforms payloads into DTOs
-      whitelist: true,             // Removes unknown properties
-      forbidNonWhitelisted: false, // Can set to true to throw an error on unknown props
-    }),
-  );
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 
   // ✅ Port configuration
   const port = configService.get<number>('PORT') || 8080;
