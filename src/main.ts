@@ -17,7 +17,10 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'https://www.aligner360.in', // production frontend
-      'http://localhost:3000',     // local development
+      'https://aligner-360-admin-panel.vercel.app', // production admin panel
+      'http://localhost:3000',     // local development frontend
+      'http://localhost:3001',     // local development admin panel
+      'http://localhost:3002',     // alternative local development
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
@@ -25,17 +28,11 @@ async function bootstrap() {
   });
 
   // ✅ Global validation pipes
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(204);
-  }
-  next();
-});
-
+  app.useGlobalPipes(new ValidationPipe({ 
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true
+  }));
 
   // ✅ Port configuration
   const port = configService.get<number>('PORT') || 8080;

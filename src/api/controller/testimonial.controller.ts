@@ -11,6 +11,8 @@ import {
   UseGuards,
   UseInterceptors,
   ValidationPipe,
+  InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 import { TestimonialService } from '../services/testimonial.service';
 import { ImageKitService } from '../services/imagekit.service';
@@ -29,12 +31,17 @@ export class TestimonialController {
 
   @Get()
   async getTestimonials() {
-    const testimonials = await this.testimonialService.getTestimonials();
-    return {
-      success: true,
-      message: 'Testimonials retrieved successfully',
-      data: testimonials,
-    };
+    try {
+      const testimonials = await this.testimonialService.getTestimonials();
+      return {
+        success: true,
+        message: 'Testimonials retrieved successfully',
+        data: testimonials,
+      };
+    } catch (error) {
+      this.logger.error('Error in getTestimonials', error.stack);
+      throw new InternalServerErrorException('Failed to retrieve testimonials');
+    }
   }
 
   @Post()
@@ -50,7 +57,7 @@ export class TestimonialController {
         if (allowedImageTypes.includes(file.mimetype)) {
           callback(null, true);
         } else {
-          callback(new Error('Image file must be JPEG, PNG, or JPG'), false);
+          callback(new BadRequestException('Image file must be JPEG, PNG, or JPG'), false);
         }
       },
     }),
@@ -59,34 +66,50 @@ export class TestimonialController {
     @Body(ValidationPipe) testimonialDto: TestimonialDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    const { name, message } = testimonialDto;
+    try {
+      const { name, message } = testimonialDto;
 
-    if (!name || !message || !file) {
-      throw new Error('Name, message, and image are required');
+      if (!name || !message) {
+        throw new BadRequestException('Name and message are required');
+      }
+
+      if (!file) {
+        throw new BadRequestException('Image file is required');
+      }
+
+      const imageBuffer = file.buffer;
+
+      const imageKitResponse = await this.imageKitService.uploadFile(
+        imageBuffer,
+        file.originalname,
+        'testimonials-images',
+        false,
+        ['testimonial'],
+      );
+      
+      if (!imageKitResponse?.url) {
+        throw new InternalServerErrorException('Failed to upload image');
+      }
+      
+      const testimonial = await this.testimonialService.createTestimonial({
+        name,
+        imageUrl: imageKitResponse.url,
+        message,
+      });
+      
+      return {
+        success: true,
+        message: 'Testimonial created successfully',
+        data: testimonial,
+      };
+    } catch (error) {
+      this.logger.error('Error in createTestimonial', error.stack);
+      // Re-throw NestJS specific exceptions
+      if (error instanceof BadRequestException || error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to create testimonial');
     }
-
-    const imageBuffer = file.buffer;
-
-    const imageKitResponse = await this.imageKitService.uploadFile(
-      imageBuffer,
-      file.originalname,
-      'testimonials-images',
-      false,
-      ['testimonial'],
-    );
-    if (!imageKitResponse?.url) {
-      throw new Error('Failed to upload image');
-    }
-    const testimonial = await this.testimonialService.createTestimonial({
-      name,
-      imageUrl: imageKitResponse.url,
-      message,
-    });
-    return {
-      success: true,
-      message: 'Testimonial created successfully',
-      data: testimonial,
-    };
   }
 
   @Put(':id')
@@ -102,7 +125,7 @@ export class TestimonialController {
         if (allowedImageTypes.includes(file.mimetype)) {
           callback(null, true);
         } else {
-          callback(new Error('Image file must be JPEG, PNG, or JPG'), false);
+          callback(new BadRequestException('Image file must be JPEG, PNG, or JPG'), false);
         }
       },
     }),
@@ -112,45 +135,65 @@ export class TestimonialController {
     @Body(ValidationPipe) testimonialDto: TestimonialDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    const { name, message } = testimonialDto;
+    try {
+      const { name, message } = testimonialDto;
 
-    let imageFile: string | null = null;
-    if (file) {
-      const imageBuffer = file.buffer;
-      const fileName = new Date().toISOString() + '-' + file.originalname;
+      let imageFile: string | null = null;
+      if (file) {
+        const imageBuffer = file.buffer;
+        const fileName = new Date().toISOString() + '-' + file.originalname;
 
-      const imageKitResponse = await this.imageKitService.uploadFile(
-        imageBuffer,
-        'testimonials',
-        fileName,
-        true,
-        ['testimonial'],
-      );
-      if (!imageKitResponse?.url) {
-        throw new Error('Failed to upload image');
+        const imageKitResponse = await this.imageKitService.uploadFile(
+          imageBuffer,
+          'testimonials',
+          fileName,
+          true,
+          ['testimonial'],
+        );
+        if (!imageKitResponse?.url) {
+          throw new InternalServerErrorException('Failed to upload image');
+        }
+        imageFile = imageKitResponse.url;
       }
-      imageFile = imageKitResponse.url;
+      
+      const testimonial = await this.testimonialService.updateTestimonial(id, {
+        name,
+        ...(!!imageFile && { imageUrl: imageFile, message }),
+        message,
+      });
+      
+      return {
+        success: true,
+        message: 'Testimonial updated successfully',
+        data: testimonial,
+      };
+    } catch (error) {
+      this.logger.error(`Error in updateTestimonial with id ${id}`, error.stack);
+      // Re-throw NestJS specific exceptions
+      if (error instanceof BadRequestException || error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to update testimonial');
     }
-    const testimonial = await this.testimonialService.updateTestimonial(id, {
-      name,
-      ...(!!imageFile && { imageUrl: imageFile, message }),
-      message,
-    });
-    return {
-      success: true,
-      message: 'Testimonial updated successfully',
-      data: testimonial,
-    };
   }
 
   @Delete(':id')
   @Roles(UserRole.ADMIN)
   @UseGuards(AuthGuard)
   async deleteTestimonial(@Param('id') id: string) {
-    await this.testimonialService.deleteTestimonial(id);
-    return {
-      success: true,
-      message: 'Testimonial deleted successfully',
-    };
+    try {
+      await this.testimonialService.deleteTestimonial(id);
+      return {
+        success: true,
+        message: 'Testimonial deleted successfully',
+      };
+    } catch (error) {
+      this.logger.error(`Error in deleteTestimonial with id ${id}`, error.stack);
+      // Re-throw NestJS specific exceptions
+      if (error instanceof BadRequestException || error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to delete testimonial');
+    }
   }
 }
